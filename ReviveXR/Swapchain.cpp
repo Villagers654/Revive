@@ -103,7 +103,10 @@ DXGI_FORMAT ovrTextureSwapChainData::TextureFormatToDXGIFormat(ovrTextureFormat 
 
 		// Depth formats
 	case OVR_FORMAT_D16_UNORM:            return DXGI_FORMAT_D16_UNORM;
-	case OVR_FORMAT_D24_UNORM_S8_UINT:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	// WineOpenXR maps D24S8 to VK_FORMAT_D24_UNORM_S8_UINT, which is not
+	// universally advertised by Monado's Vulkan device. D32S8 preserves stencil
+	// and maps to the broadly supported VK_FORMAT_D32_SFLOAT_S8_UINT.
+	case OVR_FORMAT_D24_UNORM_S8_UINT:    return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 	case OVR_FORMAT_D32_FLOAT:            return DXGI_FORMAT_D32_FLOAT;
 	case OVR_FORMAT_D32_FLOAT_S8X24_UINT: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 

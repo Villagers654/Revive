@@ -33,7 +33,11 @@ Runtime::HackInfo Runtime::s_known_hacks[] = {
 	{ nullptr, "SteamVR/OpenXR", HACK_VALVE_INDEX_PROFILE, 0, 0, true },
 	{ nullptr, "SteamVR/OpenXR", HACK_BROKEN_LINE_LOOP, 0, 0x100000000, true },
 	{ nullptr, "SteamVR/OpenXR", HACK_MIN_HAPTIC_DURATION, 0, 0, true },
-	{ nullptr, "Windows Mixed Reality Runtime", HACK_WAIT_FOR_SESSION_READY, 0, 0, true },
+	// Oculus applications often refuse to create their first graphics swapchain
+	// until the session is READY. WineOpenXR decorates Monado's runtime name, so
+	// matching one literal is brittle. Waiting is safe on conformant runtimes and
+	// is required by the Monado/Proton path.
+	{ nullptr, nullptr, HACK_WAIT_FOR_SESSION_READY, 0, 0, true },
 	{ "echovr.exe", nullptr, HACK_FORCE_FOV_FALLBACK, 0, 0, true },
 	{ "loneecho.exe", nullptr, HACK_FORCE_FOV_FALLBACK, 0, 0, true },
 };

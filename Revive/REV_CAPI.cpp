@@ -159,6 +159,8 @@ OVR_PUBLIC_FUNCTION(void) ovr_GetLastErrorInfo(ovrErrorInfo* errorInfo)
 		return;
 
 	const char* error = VR_GetVRInitErrorAsEnglishDescription(g_InitError);
+	if (!error)
+		error = "Unknown OpenVR initialization error";
 	strcpy_s(errorInfo->ErrorString, sizeof(ovrErrorInfo::ErrorString), error);
 	errorInfo->Result = InitErrorToOvrError(g_InitError);
 }

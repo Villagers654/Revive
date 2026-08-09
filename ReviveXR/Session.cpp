@@ -150,7 +150,15 @@ ovrResult ovrHmdStruct::StartSession(void* graphicsBinding)
 	createInfo.next = graphicsBinding;
 	createInfo.systemId = System;
 	CHK_XR(xrCreateSession(Instance, &createInfo, &Session));
-	memset(&SessionStatus, 0, sizeof(SessionStatus));
+	// Several Oculus titles query presence before creating their first graphics
+	// swapchain. Seed the status to the connected state; real OpenXR lifecycle
+	// events continue to update these bits in ovr_GetSessionStatus.
+	SessionStatusBits initialStatus = {};
+	initialStatus.IsVisible = true;
+	initialStatus.HmdPresent = true;
+	initialStatus.HmdMounted = true;
+	initialStatus.HasInputFocus = true;
+	SessionStatus = initialStatus;
 
 	// Attach it to the InputManager
 	if (Input)

@@ -67,7 +67,8 @@ ovr_GetInstanceExtensionsVk(
 	std::string result = extensions.str();
 	uint32_t size = *inoutExtensionNamesSize;
 	*inoutExtensionNamesSize = (uint32_t)result.size();
-	strncpy(extensionNames, result.c_str(), size);
+	if (extensionNames && size)
+		strncpy(extensionNames, result.c_str(), size);
 	return (result.size() < size) ? ovrSuccess : ovrError_InsufficientArraySize;
 }
 
@@ -81,7 +82,13 @@ ovr_GetDeviceExtensionsVk(
 		ovrError_InvalidParameter;
 
 	std::stringstream extensions;
-	uint32_t required = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(g_physicalDevice, nullptr, 0);
+	// xrizer cannot answer this query until ovr_GetSessionPhysicalDeviceVk has
+	// selected a real Vulkan device. The Oculus API permits this initial
+	// size-only query, so defer the OpenVR portion instead of passing a null
+	// physical-device handle through Proton.
+	uint32_t required = g_physicalDevice
+		? vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(g_physicalDevice, nullptr, 0)
+		: 0;
 	if (required > 0)
 	{
 		std::vector<char> openvrExtensions(required);
@@ -96,7 +103,8 @@ ovr_GetDeviceExtensionsVk(
 	std::string result = extensions.str();
 	uint32_t size = *inoutExtensionNamesSize;
 	*inoutExtensionNamesSize = (uint32_t)result.size();
-	strncpy(extensionNames, result.c_str(), size);
+	if (extensionNames && size)
+		strncpy(extensionNames, result.c_str(), size);
 	return (result.size() < size) ? ovrSuccess : ovrError_InsufficientArraySize;
 }
 
@@ -309,4 +317,3 @@ ovr_GetMirrorTextureBufferVk(
 
 	return ovrSuccess;
 }
-

@@ -130,8 +130,13 @@ ovrResult CompositorBase::WaitToBeginFrame(ovrSession session, long long frameIn
 {
 	MICROPROFILE_SCOPE(WaitToBeginFrame);
 
-	// OVR ignores attempts at waiting multiple frames, so simply wait for the next frame here.
-	vr::VRCompositorError error = vr::VRCompositor()->WaitGetPoses(nullptr, 0, nullptr, 0);
+	// Wine/Proton + xrizer already waits through the host OpenXR frame loop.
+	// Calling WaitGetPoses here can deadlock before the first submitted frame.
+	// Keep upstream behavior everywhere else and make the compatibility path an
+	// explicit launcher opt-in.
+	vr::VRCompositorError error = vr::VRCompositorError_None;
+	if (!GetEnvironmentVariableW(L"RIFTLIFT_XRIZER", nullptr, 0))
+		error = vr::VRCompositor()->WaitGetPoses(nullptr, 0, nullptr, 0);
 	session->FrameIndex = frameIndex;
 	session->Input->UpdateInputState();
 	return CompositorErrorToOvrError(error);

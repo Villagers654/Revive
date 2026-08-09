@@ -1,5 +1,10 @@
 # Revive Compatibility Layer
 
+> **RiftLift compatibility fork:** this fork carries the source-level
+> Wine/Proton, Monado, and xrizer fixes packaged by
+> [RiftLift](https://github.com/Villagers654/RiftLift). Windows behavior stays
+> upstream-compatible unless the `RIFTLIFT_XRIZER` launcher opt-in is set.
+
 This is a compatibility layer between the Oculus SDK and OpenVR/OpenXR. It allows you to play Oculus-exclusive games on your HTC Vive or Valve Index.
 
 [Refer to the wiki](https://github.com/LibreVR/Revive/wiki) if you run into any problems. You can also find a [community-compiled list of working games on the wiki](https://github.com/LibreVR/Revive/wiki/Compatibility-list), feel free to add your own results.

@@ -1,0 +1,53 @@
+name: RiftLift Revive build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download Oculus PC SDK
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'oculus-sdk.zip'
+          Invoke-WebRequest 'https://securecdn.oculus.com/binaries/download/?id=4377593722298679' -OutFile $archive
+          Expand-Archive $archive -DestinationPath Externals -Force
+
+      - name: Install native dependencies
+        shell: pwsh
+        run: |
+          & C:\vcpkg\vcpkg.exe install --triplet x86-windows-static detours openxr-loader glfw3
+          & C:\vcpkg\vcpkg.exe install --triplet x64-windows-static detours openxr-loader glfw3
+          & C:\vcpkg\vcpkg.exe integrate install
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build Revive compatibility libraries
+        shell: pwsh
+        run: |
+          msbuild Revive.sln /m /t:Build /p:Configuration=Release /p:Platform=x64
+          msbuild Revive.sln /m /t:Build /p:Configuration=Release /p:Platform=Win32
+
+      - name: Collect RiftLift payload
+        shell: pwsh
+        run: |
+          $out = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\riftlift-revive"
+          Copy-Item Release\ReviveInjector.exe $out
+          Copy-Item Release\LibRevive32.dll $out
+          Copy-Item Release\LibRevive64.dll $out
+          Copy-Item Release\LibReviveXR32.dll $out
+          Copy-Item Release\LibReviveXR64.dll $out
+          Copy-Item LICENSE $out
+          Compress-Archive "$out\*" "$env:RUNNER_TEMP\riftlift-revive.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riftlift-revive
+          path: ${{ runner.temp }}/riftlift-revive.zip
