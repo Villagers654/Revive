@@ -44,6 +44,10 @@ jobs:
         run: |
           $out = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\riftlift-revive"
           Copy-Item Release\ReviveInjector.exe $out
+          # ReviveInjector links to OpenVR for application identity even when
+          # /openxr is selected, so this is a runtime dependency, not an
+          # optional OpenVR compositor payload.
+          Copy-Item Release\openvr_api64.dll $out
           Copy-Item Release\LibReviveXR32.dll $out
           Copy-Item Release\LibReviveXR64.dll $out
           Copy-Item LICENSE $out
