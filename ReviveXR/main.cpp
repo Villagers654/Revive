@@ -13,6 +13,10 @@ static HMODULE(WINAPI* TrueLoadLibraryA)(LPCSTR lpFileName) = LoadLibraryA;
 static HMODULE(WINAPI* TrueLoadLibraryExA)(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) = LoadLibraryExA;
 static HMODULE(WINAPI* TrueLoadLibraryW)(LPCWSTR lpFileName) = LoadLibraryW;
 static HMODULE(WINAPI* TrueLoadLibraryExW)(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) = LoadLibraryExW;
+static HMODULE(WINAPI* TrueGetModuleHandleA)(LPCSTR lpModuleName) = GetModuleHandleA;
+static HMODULE(WINAPI* TrueGetModuleHandleW)(LPCWSTR lpModuleName) = GetModuleHandleW;
+static BOOL(WINAPI* TrueGetModuleHandleExA)(DWORD dwFlags, LPCSTR lpModuleName, HMODULE* phModule) = GetModuleHandleExA;
+static BOOL(WINAPI* TrueGetModuleHandleExW)(DWORD dwFlags, LPCWSTR lpModuleName, HMODULE* phModule) = GetModuleHandleExW;
 static HANDLE(WINAPI* TrueOpenEvent)(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCWSTR lpName) = OpenEventW;
 
 HMODULE revModule;
@@ -20,6 +24,16 @@ CHAR revModuleNameA[MAX_PATH];
 CHAR ovrModuleNameA[MAX_PATH];
 WCHAR revModuleName[MAX_PATH];
 WCHAR ovrModuleName[MAX_PATH];
+
+bool IsOvrRuntimeName(LPCSTR lpModuleName)
+{
+	return lpModuleName && _stricmp(PathFindFileNameA(lpModuleName), ovrModuleNameA) == 0;
+}
+
+bool IsOvrRuntimeName(LPCWSTR lpModuleName)
+{
+	return lpModuleName && _wcsicmp(PathFindFileNameW(lpModuleName), ovrModuleName) == 0;
+}
 
 HANDLE WINAPI HookOpenEvent(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCWSTR lpName)
 {
@@ -83,6 +97,38 @@ HMODULE WINAPI HookLoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwF
 	return TrueLoadLibraryExW(lpLibFileName, hFile, dwFlags);
 }
 
+HMODULE WINAPI HookGetModuleHandleA(LPCSTR lpModuleName)
+{
+	if (IsOvrRuntimeName(lpModuleName))
+		return revModule;
+
+	return TrueGetModuleHandleA(lpModuleName);
+}
+
+HMODULE WINAPI HookGetModuleHandleW(LPCWSTR lpModuleName)
+{
+	if (IsOvrRuntimeName(lpModuleName))
+		return revModule;
+
+	return TrueGetModuleHandleW(lpModuleName);
+}
+
+BOOL WINAPI HookGetModuleHandleExA(DWORD dwFlags, LPCSTR lpModuleName, HMODULE* phModule)
+{
+	if (!(dwFlags & GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS) && IsOvrRuntimeName(lpModuleName))
+		return TrueGetModuleHandleExA(dwFlags, revModuleNameA, phModule);
+
+	return TrueGetModuleHandleExA(dwFlags, lpModuleName, phModule);
+}
+
+BOOL WINAPI HookGetModuleHandleExW(DWORD dwFlags, LPCWSTR lpModuleName, HMODULE* phModule)
+{
+	if (!(dwFlags & GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS) && IsOvrRuntimeName(lpModuleName))
+		return TrueGetModuleHandleExW(dwFlags, revModuleName, phModule);
+
+	return TrueGetModuleHandleExW(dwFlags, lpModuleName, phModule);
+}
+
 void AttachDetours()
 {
 	DetourTransactionBegin();
@@ -91,6 +137,10 @@ void AttachDetours()
 	DetourAttach((PVOID*)&TrueLoadLibraryExA, HookLoadLibraryExA);
 	DetourAttach((PVOID*)&TrueLoadLibraryW, HookLoadLibraryW);
 	DetourAttach((PVOID*)&TrueLoadLibraryExW, HookLoadLibraryExW);
+	DetourAttach((PVOID*)&TrueGetModuleHandleA, HookGetModuleHandleA);
+	DetourAttach((PVOID*)&TrueGetModuleHandleW, HookGetModuleHandleW);
+	DetourAttach((PVOID*)&TrueGetModuleHandleExA, HookGetModuleHandleExA);
+	DetourAttach((PVOID*)&TrueGetModuleHandleExW, HookGetModuleHandleExW);
 	DetourAttach(&(PVOID&)TrueOpenEvent, HookOpenEvent);
 	DetourTransactionCommit();
 }
@@ -103,6 +153,10 @@ void DetachDetours()
 	DetourDetach((PVOID*)&TrueLoadLibraryExA, HookLoadLibraryExA);
 	DetourDetach((PVOID*)&TrueLoadLibraryW, HookLoadLibraryW);
 	DetourDetach((PVOID*)&TrueLoadLibraryExW, HookLoadLibraryExW);
+	DetourDetach((PVOID*)&TrueGetModuleHandleA, HookGetModuleHandleA);
+	DetourDetach((PVOID*)&TrueGetModuleHandleW, HookGetModuleHandleW);
+	DetourDetach((PVOID*)&TrueGetModuleHandleExA, HookGetModuleHandleExA);
+	DetourDetach((PVOID*)&TrueGetModuleHandleExW, HookGetModuleHandleExW);
 	DetourDetach(&(PVOID&)TrueOpenEvent, HookOpenEvent);
 	DetourTransactionCommit();
 }
