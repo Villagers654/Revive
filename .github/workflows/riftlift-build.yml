@@ -32,16 +32,18 @@ jobs:
       - name: Build Revive compatibility libraries
         shell: pwsh
         run: |
-          msbuild Revive.sln /m /t:Build /p:Configuration=Release /p:Platform=x64
-          msbuild Revive.sln /m /t:Build /p:Configuration=Release /p:Platform=Win32
+          # RiftLift uses ReviveXR directly against WineOpenXR/Monado. Building
+          # the desktop overlay pulls in ATL and OpenVR components we neither
+          # ship nor need. Match vcpkg's current VS 2022 toolset as well.
+          msbuild ReviveXR\ReviveXR.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+          msbuild ReviveXR\ReviveXR.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143
+          msbuild ReviveInjector\ReviveInjector.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
 
       - name: Collect RiftLift payload
         shell: pwsh
         run: |
           $out = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\riftlift-revive"
           Copy-Item Release\ReviveInjector.exe $out
-          Copy-Item Release\LibRevive32.dll $out
-          Copy-Item Release\LibRevive64.dll $out
           Copy-Item Release\LibReviveXR32.dll $out
           Copy-Item Release\LibReviveXR64.dll $out
           Copy-Item LICENSE $out
