@@ -150,6 +150,11 @@ ovrResult InputManager::GetInputState(ovrSession session, ovrControllerType cont
 {
 	memset(inputState, 0, sizeof(ovrInputState));
 
+	// Interaction profiles can become active after the Oculus session is
+	// created. Refresh here so a controller that appeared after startup is not
+	// hidden indefinitely by the initial ConnectedControllers snapshot.
+	UpdateConnectedControllers();
+
 	uint32_t types = 0;
 	for (InputDevice* device : m_InputDevices)
 	{

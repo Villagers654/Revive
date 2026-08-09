@@ -556,6 +556,12 @@ OVR_PUBLIC_FUNCTION(unsigned int) ovr_GetConnectedControllerTypes(ovrSession ses
 {
 	REV_TRACE(ovr_GetConnectedControllerTypes);
 
+	if (!session)
+		return ovrControllerType_None;
+
+	// XR runtimes may publish interaction profiles after session creation.
+	// Query the current OpenVR roles instead of returning a startup-time cache.
+	session->Input->UpdateConnectedControllers();
 	return session->Input->ConnectedControllers;
 }
 
