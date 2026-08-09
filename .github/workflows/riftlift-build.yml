@@ -35,9 +35,9 @@ jobs:
           # RiftLift uses ReviveXR directly against WineOpenXR/Monado. Building
           # the desktop overlay pulls in ATL and OpenVR components we neither
           # ship nor need. Match vcpkg's current VS 2022 toolset as well.
-          msbuild ReviveXR\ReviveXR.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
-          msbuild ReviveXR\ReviveXR.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143
-          msbuild ReviveInjector\ReviveInjector.vcxproj /m /t:Build /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+          msbuild Revive.sln /m /t:ReviveXR /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+          msbuild Revive.sln /m /t:ReviveXR /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v143
+          msbuild Revive.sln /m /t:ReviveInjector /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
 
       - name: Collect RiftLift payload
         shell: pwsh
