@@ -200,6 +200,7 @@ int wmain(int argc, wchar_t *argv[]) {
 	PathRemoveFileSpecA(moduleDir);
 
 	bool debug = false;
+	bool waitForExit = false;
 	StringArray dlls;
 	std::string appKey;
 	wchar_t path[MAX_PATH] = { 0 };
@@ -236,6 +237,10 @@ int wmain(int argc, wchar_t *argv[]) {
 		else if (wcscmp(argv[i], L"/debug") == 0)
 		{
 			debug = true;
+		}
+		else if (wcscmp(argv[i], L"/wait") == 0)
+		{
+			waitForExit = true;
 		}
 		else
 		{
@@ -316,5 +321,14 @@ int wmain(int argc, wchar_t *argv[]) {
 			vr::VR_Shutdown();
 		}
 	}
-	return 0;
+
+	DWORD exitCode = 0;
+	if (waitForExit)
+	{
+		WaitForSingleObject(pi.hProcess, INFINITE);
+		GetExitCodeProcess(pi.hProcess, &exitCode);
+	}
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
+	return static_cast<int>(exitCode);
 }
