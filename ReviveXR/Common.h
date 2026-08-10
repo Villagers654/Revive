@@ -8,12 +8,11 @@
 #include <assert.h>
 #include <string>
 
-#if 0
-#include <Windows.h>
-#define REV_TRACE(x) OutputDebugStringA("Revive: " #x "\n");
-#else
-#define REV_TRACE(x) MICROPROFILE_SCOPEI("Revive", #x, 0xff0000);
-#endif
+// When RIFTLIFT_REVIVE_TRACE is set, record the first call to each Oculus API
+// entry point. This gives compatibility layers a bounded startup trace without
+// adding per-frame I/O or changing normal runtime behavior.
+void TraceOculusCall(const char* name);
+#define REV_TRACE(x) MICROPROFILE_SCOPEI("Revive", #x, 0xff0000); TraceOculusCall(#x);
 
 #define XR_ENUM_CASE_STR(name, val) case name: return L#name;
 constexpr const wchar_t* ResultToString(XrResult e)

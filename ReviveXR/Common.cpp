@@ -4,9 +4,41 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+#include <cstdio>
+#include <cstdlib>
+#include <mutex>
+#include <string>
+#include <unordered_set>
+
 extern XrInstance g_Instance;
 
 XrResult g_LastResult = XR_SUCCESS;
+
+void TraceOculusCall(const char* name)
+{
+	static const bool enabled = std::getenv("RIFTLIFT_REVIVE_TRACE") != nullptr;
+	if (!enabled)
+		return;
+
+	static std::mutex lock;
+	static std::unordered_set<std::string> seen;
+	std::lock_guard<std::mutex> guard(lock);
+	if (!seen.emplace(name).second)
+		return;
+
+	char temp[MAX_PATH];
+	char path[MAX_PATH];
+	if (!GetTempPathA(static_cast<DWORD>(sizeof(temp)), temp) ||
+		sprintf_s(path, sizeof(path), "%sriftlift-revive-trace.log", temp) < 0)
+		return;
+
+	FILE* stream = nullptr;
+	if (fopen_s(&stream, path, "a") == 0 && stream)
+	{
+		fprintf(stream, "%lu %s\n", GetCurrentProcessId(), name);
+		fclose(stream);
+	}
+}
 
 ovrResult ResultToOvrResult(XrResult error)
 {
