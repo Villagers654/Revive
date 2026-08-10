@@ -206,30 +206,21 @@ ovrResult ovrHmdStruct::BeginSession()
 	XrSessionBeginInfo beginInfo = XR_TYPE(SESSION_BEGIN_INFO);
 	beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 	CHK_XR(xrBeginSession(Session, &beginInfo));
+	// Do not bootstrap a frame from the lifecycle thread. Explicit-frame games
+	// may already be waiting on their render thread, and beginning a second
+	// OpenXR frame here races that caller. SubmitFrame-only games lazily start
+	// their first frame in ovr_SubmitFrame2 instead.
+	RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
+	FrameBegun = false;
 	SessionRunning = true;
 	Running.second.notify_all();
-
-	if (!g_WaitPumpingEvents)
-	{
-		// Start the first frame immediately in case the app uses SubmitFrame().
-		long long currentIndex = (*CurrentFrame).frameIndex;
-		CHK_OVR(ovr_WaitToBeginFrame(this, currentIndex));
-		RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
-		CHK_OVR(ovr_BeginFrame(this, currentIndex));
-	}
-	else
-	{
-		// The caller's ovr_WaitToBeginFrame already supplied a valid predicted
-		// display time. Do not let that event-pumping startup path skip the
-		// Oculus eye-level origin calibration.
-		RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
-	}
 	return ovrSuccess;
 }
 
 ovrResult ovrHmdStruct::EndSession()
 {
 	SessionRunning = false;
+	FrameBegun = false;
 	CHK_XR(xrEndSession(Session));
 	return ovrSuccess;
 }
@@ -239,6 +230,7 @@ ovrResult ovrHmdStruct::DestroySession()
 	if (!Session)
 		return ovrError_InvalidOperation;
 	SessionRunning = false;
+	FrameBegun = false;
 
 	if (Input)
 		Input->AttachSession(XR_NULL_HANDLE);

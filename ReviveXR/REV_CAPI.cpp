@@ -26,8 +26,6 @@ std::list<ovrHmdStruct> g_Sessions;
 
 using namespace std::chrono_literals;
 
-thread_local bool g_WaitPumpingEvents = false;
-
 bool LoadRenderDoc()
 {
 	LONG error = ERROR_SUCCESS;
@@ -903,9 +901,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_WaitToBeginFrame(ovrSession session, long lon
 	while (!session->SessionRunning.load())
 	{
 		ovrSessionStatus sessionStatus = {};
-		g_WaitPumpingEvents = true;
 		ovrResult statusResult = ovr_GetSessionStatus(session, &sessionStatus);
-		g_WaitPumpingEvents = false;
 		if (OVR_FAILURE(statusResult))
 			return statusResult;
 
@@ -949,6 +945,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_BeginFrame(ovrSession session, long long fram
 	XrResult beginResult = xrBeginFrame(session->Session, &beginInfo);
 	TraceOculusValue("xrBeginFrame.result", beginResult);
 	CHK_XR(beginResult);
+	session->FrameBegun = true;
 	TraceOculusValue("ovr_BeginFrame.return", ovrSuccess);
 	return ovrSuccess;
 }
@@ -1186,7 +1183,10 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_EndFrame(ovrSession session, long long frameI
 	endInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	endInfo.layerCount = (uint32_t)layers.size();
 	endInfo.layers = layers.data();
-	CHK_XR(xrEndFrame(session->Session, &endInfo));
+	XrResult endResult = xrEndFrame(session->Session, &endInfo);
+	TraceOculusValue("xrEndFrame.result", endResult);
+	CHK_XR(endResult);
+	session->FrameBegun = false;
 
 	MicroProfileFlip();
 
@@ -1205,6 +1205,15 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_SubmitFrame2(ovrSession session, long long fr
 	long long currentIndex = (*session->CurrentFrame).frameIndex;
 	if (frameIndex <= 0)
 		frameIndex = currentIndex;
+	// SubmitFrame-only applications never call the explicit wait/begin pair.
+	// Lazily open their first frame here, after the OpenXR session is fully
+	// running, instead of racing the lifecycle thread during BeginSession.
+	if (!session->FrameBegun.load())
+	{
+		CHK_OVR(ovr_WaitToBeginFrame(session, frameIndex));
+		CHK_OVR(ovr_BeginFrame(session, frameIndex));
+		currentIndex = (*session->CurrentFrame).frameIndex;
+	}
 
 	// Some older games submit frames redundantly, so we discard old frames in the legacy call
 	if (frameIndex >= currentIndex)
