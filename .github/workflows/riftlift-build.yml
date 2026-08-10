@@ -32,11 +32,13 @@ jobs:
       - name: Build Revive compatibility libraries
         shell: pwsh
         run: |
-          # RiftLift uses ReviveXR directly against WineOpenXR/Monado. Building
-          # the desktop overlay pulls in ATL and OpenVR components we neither
-          # ship nor need. Match vcpkg's current VS 2022 toolset as well.
+          # Ship both translation backends. ReviveXR is the shortest path for
+          # modern Oculus SDK clients, while classic Revive covers older SDK
+          # behavior through an OpenVR-to-OpenXR runtime such as xrizer. The
+          # desktop overlay is still intentionally excluded.
           msbuild Revive.sln /m /t:ReviveXR /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
           msbuild Revive.sln /m /t:ReviveXR /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v143
+          msbuild Revive.sln /m /t:Revive /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
           msbuild Revive.sln /m /t:ReviveInjector /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
 
       - name: Collect RiftLift payload
@@ -48,6 +50,7 @@ jobs:
           # /openxr is selected, so this is a runtime dependency, not an
           # optional OpenVR compositor payload.
           Copy-Item Release\openvr_api64.dll $out
+          Copy-Item Release\LibRevive64.dll $out
           Copy-Item Release\LibReviveXR32.dll $out
           Copy-Item Release\LibReviveXR64.dll $out
           Copy-Item LICENSE $out
