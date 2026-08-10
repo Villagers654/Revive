@@ -43,6 +43,7 @@ struct ovrHmdStruct
 	// Synchronization
 	std::pair<std::mutex,
 		std::condition_variable> Running;
+	std::atomic<bool> SessionRunning{ false };
 	std::shared_mutex TrackingMutex;
 
 	// System handles

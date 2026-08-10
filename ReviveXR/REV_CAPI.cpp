@@ -894,7 +894,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_WaitToBeginFrame(ovrSession session, long lon
 	{
 		// Wait until the session is running, since the render thread may still be initializing
 		std::unique_lock<std::mutex> lk(session->Running.first);
-		if (!session->Running.second.wait_for(lk, 10s, [session] { return session->Session != XR_NULL_HANDLE; }))
+		if (!session->Running.second.wait_for(lk, 10s, [session] { return session->SessionRunning.load(); }))
 			return ovrError_Timeout;
 	}
 

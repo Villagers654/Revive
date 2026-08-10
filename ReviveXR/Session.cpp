@@ -151,6 +151,7 @@ ovrResult ovrHmdStruct::StartSession(void* graphicsBinding)
 	createInfo.next = graphicsBinding;
 	createInfo.systemId = System;
 	CHK_XR(xrCreateSession(Instance, &createInfo, &Session));
+	SessionRunning = false;
 	// Several Oculus titles query presence before creating their first graphics
 	// swapchain. Seed the status to the connected state; real OpenXR lifecycle
 	// events continue to update these bits in ovr_GetSessionStatus.
@@ -205,6 +206,8 @@ ovrResult ovrHmdStruct::BeginSession()
 	XrSessionBeginInfo beginInfo = XR_TYPE(SESSION_BEGIN_INFO);
 	beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 	CHK_XR(xrBeginSession(Session, &beginInfo));
+	SessionRunning = true;
+	Running.second.notify_all();
 
 	// Start the first frame immediately in case the app uses SubmitFrame().
 	long long currentIndex = (*CurrentFrame).frameIndex;
@@ -216,6 +219,7 @@ ovrResult ovrHmdStruct::BeginSession()
 
 ovrResult ovrHmdStruct::EndSession()
 {
+	SessionRunning = false;
 	CHK_XR(xrEndSession(Session));
 	return ovrSuccess;
 }
@@ -224,6 +228,7 @@ ovrResult ovrHmdStruct::DestroySession()
 {
 	if (!Session)
 		return ovrError_InvalidOperation;
+	SessionRunning = false;
 
 	if (Input)
 		Input->AttachSession(XR_NULL_HANDLE);
