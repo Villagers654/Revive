@@ -92,3 +92,9 @@ struct ovrHmdStruct
 	ovrResult RecenterSpace(ovrTrackingOrigin origin, XrSpace anchor, ovrPosef offset = OVR::Posef::Identity());
 	bool SupportsFormat(int64_t format) const;
 };
+
+// Older Oculus Unity providers can block their render thread in
+// ovr_WaitToBeginFrame before the game polls ovr_GetSessionStatus. The wait
+// path temporarily pumps OpenXR events and uses this flag to avoid recursively
+// beginning the first frame from BeginSession.
+extern thread_local bool g_WaitPumpingEvents;

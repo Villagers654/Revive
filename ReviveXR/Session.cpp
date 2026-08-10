@@ -209,11 +209,14 @@ ovrResult ovrHmdStruct::BeginSession()
 	SessionRunning = true;
 	Running.second.notify_all();
 
-	// Start the first frame immediately in case the app uses SubmitFrame().
-	long long currentIndex = (*CurrentFrame).frameIndex;
-	CHK_OVR(ovr_WaitToBeginFrame(this, currentIndex));
-	RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
-	CHK_OVR(ovr_BeginFrame(this, currentIndex));
+	if (!g_WaitPumpingEvents)
+	{
+		// Start the first frame immediately in case the app uses SubmitFrame().
+		long long currentIndex = (*CurrentFrame).frameIndex;
+		CHK_OVR(ovr_WaitToBeginFrame(this, currentIndex));
+		RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
+		CHK_OVR(ovr_BeginFrame(this, currentIndex));
+	}
 	return ovrSuccess;
 }
 

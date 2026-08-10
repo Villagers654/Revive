@@ -26,6 +26,8 @@ std::list<ovrHmdStruct> g_Sessions;
 
 using namespace std::chrono_literals;
 
+thread_local bool g_WaitPumpingEvents = false;
+
 bool LoadRenderDoc()
 {
 	LONG error = ERROR_SUCCESS;
@@ -891,10 +893,24 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_WaitToBeginFrame(ovrSession session, long lon
 	if (!status.IsVisible)
 		return ovrSuccess_NotVisible;
 
+	// Older Unity Oculus providers can reach this render-thread call before
+	// polling ovr_GetSessionStatus on their main thread. Pump session events
+	// while waiting so XR_SESSION_STATE_READY cannot deadlock initialization.
+	const auto deadline = std::chrono::steady_clock::now() + 10s;
+	while (!session->SessionRunning.load())
 	{
-		// Wait until the session is running, since the render thread may still be initializing
+		ovrSessionStatus sessionStatus = {};
+		g_WaitPumpingEvents = true;
+		ovrResult statusResult = ovr_GetSessionStatus(session, &sessionStatus);
+		g_WaitPumpingEvents = false;
+		if (OVR_FAILURE(statusResult))
+			return statusResult;
+
 		std::unique_lock<std::mutex> lk(session->Running.first);
-		if (!session->Running.second.wait_for(lk, 10s, [session] { return session->SessionRunning.load(); }))
+		if (!session->Running.second.wait_until(lk,
+			std::min(deadline, std::chrono::steady_clock::now() + 10ms),
+			[session] { return session->SessionRunning.load(); }) &&
+			std::chrono::steady_clock::now() >= deadline)
 			return ovrError_Timeout;
 	}
 
