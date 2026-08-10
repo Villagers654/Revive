@@ -206,11 +206,31 @@ ovrResult ovrHmdStruct::BeginSession()
 	XrSessionBeginInfo beginInfo = XR_TYPE(SESSION_BEGIN_INFO);
 	beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 	CHK_XR(xrBeginSession(Session, &beginInfo));
-	// Do not bootstrap a frame from the lifecycle thread. Explicit-frame games
-	// may already be waiting on their render thread, and beginning a second
-	// OpenXR frame here races that caller. SubmitFrame-only games lazily start
-	// their first frame in ovr_SubmitFrame2 instead.
+	// Some Oculus clients wait for input focus before entering their render
+	// loop. Advance OpenXR with one complete, empty frame before publishing
+	// session readiness. Completing the frame here is important: leaving the
+	// bootstrap frame open races explicit Wait/Begin calls on the render thread.
+	XrIndexedFrameState* frameState = &FrameStats[0];
+	XrFrameWaitInfo waitInfo = XR_TYPE(FRAME_WAIT_INFO);
+	XrResult waitResult = xrWaitFrame(Session, &waitInfo, frameState);
+	TraceOculusValue("bootstrap.xrWaitFrame.result", waitResult);
+	CHK_XR(waitResult);
+	frameState->frameIndex = 0;
+	CurrentFrame = frameState;
 	RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
+
+	XrFrameBeginInfo frameBeginInfo = XR_TYPE(FRAME_BEGIN_INFO);
+	XrResult frameBeginResult = xrBeginFrame(Session, &frameBeginInfo);
+	TraceOculusValue("bootstrap.xrBeginFrame.result", frameBeginResult);
+	CHK_XR(frameBeginResult);
+
+	XrFrameEndInfo frameEndInfo = XR_TYPE(FRAME_END_INFO);
+	frameEndInfo.displayTime = frameState->predictedDisplayTime;
+	frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+	XrResult frameEndResult = xrEndFrame(Session, &frameEndInfo);
+	TraceOculusValue("bootstrap.xrEndFrame.result", frameEndResult);
+	CHK_XR(frameEndResult);
+
 	FrameBegun = false;
 	SessionRunning = true;
 	Running.second.notify_all();
