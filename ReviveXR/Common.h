@@ -12,6 +12,7 @@
 // entry point. This gives compatibility layers a bounded startup trace without
 // adding per-frame I/O or changing normal runtime behavior.
 void TraceOculusCall(const char* name);
+void TraceOculusValue(const char* name, long long value);
 #define REV_TRACE(x) MICROPROFILE_SCOPEI("Revive", #x, 0xff0000); TraceOculusCall(#x);
 
 #define XR_ENUM_CASE_STR(name, val) case name: return L#name;

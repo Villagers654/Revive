@@ -40,6 +40,26 @@ void TraceOculusCall(const char* name)
 	}
 }
 
+void TraceOculusValue(const char* name, long long value)
+{
+	static const bool enabled = std::getenv("RIFTLIFT_REVIVE_TRACE") != nullptr;
+	if (!enabled)
+		return;
+
+	char temp[MAX_PATH];
+	char path[MAX_PATH];
+	if (!GetTempPathA(static_cast<DWORD>(sizeof(temp)), temp) ||
+		sprintf_s(path, sizeof(path), "%sriftlift-revive-trace.log", temp) < 0)
+		return;
+
+	FILE* stream = nullptr;
+	if (fopen_s(&stream, path, "a") == 0 && stream)
+	{
+		fprintf(stream, "%lu %s %lld\n", GetCurrentProcessId(), name, value);
+		fclose(stream);
+	}
+}
+
 ovrResult ResultToOvrResult(XrResult error)
 {
 	switch (error)

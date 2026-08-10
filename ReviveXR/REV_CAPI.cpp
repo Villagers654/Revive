@@ -59,6 +59,9 @@ void DetachDetours();
 
 OVR_PUBLIC_FUNCTION(ovrResult) ovr_Initialize(const ovrInitParams* params)
 {
+	REV_TRACE(ovr_Initialize);
+	TraceOculusValue("ovr_Initialize.RequestedMinorVersion",
+		params ? params->RequestedMinorVersion : -1);
 	if (g_Instance)
 		return ovrSuccess;
 
@@ -917,7 +920,9 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_WaitToBeginFrame(ovrSession session, long lon
 	assert(session->CurrentFrame.is_lock_free());
 	XrIndexedFrameState* frameState = &session->FrameStats[frameIndex % ovrMaxProvidedFrameStats];
 	XrFrameWaitInfo waitInfo = XR_TYPE(FRAME_WAIT_INFO);
-	CHK_XR(xrWaitFrame(session->Session, &waitInfo, frameState));
+	XrResult waitResult = xrWaitFrame(session->Session, &waitInfo, frameState);
+	TraceOculusValue("xrWaitFrame.result", waitResult);
+	CHK_XR(waitResult);
 	frameState->frameIndex = frameIndex;
 	session->CurrentFrame = frameState;
 
@@ -941,7 +946,10 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_BeginFrame(ovrSession session, long long fram
 	assert(frameIndex == (*session->CurrentFrame).frameIndex);
 
 	XrFrameBeginInfo beginInfo = XR_TYPE(FRAME_BEGIN_INFO);
-	CHK_XR(xrBeginFrame(session->Session, &beginInfo));
+	XrResult beginResult = xrBeginFrame(session->Session, &beginInfo);
+	TraceOculusValue("xrBeginFrame.result", beginResult);
+	CHK_XR(beginResult);
+	TraceOculusValue("ovr_BeginFrame.return", ovrSuccess);
 	return ovrSuccess;
 }
 
