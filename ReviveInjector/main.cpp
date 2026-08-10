@@ -210,6 +210,15 @@ int wmain(int argc, wchar_t *argv[]) {
 		{
 			dlls.add(moduleDir + std::string("\\LibReviveXR64.dll"));
 		}
+		else if (wcscmp(argv[i], L"/openvr") == 0)
+		{
+			// Runtime discovery can be unreliable under Wine because Proton's
+			// OpenVR bridge is configured after the injector starts. Let launchers
+			// select the classic backend explicitly instead of silently falling
+			// back to ReviveXR when an OpenVR-to-OpenXR runtime is available.
+			dlls.add(moduleDir + std::string("\\openvr_api64.dll"));
+			dlls.add(moduleDir + std::string("\\LibRevive64.dll"));
+		}
 		else if (wcscmp(argv[i], L"/proxy") == 0)
 		{
 			dlls.add(moduleDir + std::string("\\LibOVRProxy64.dll"));
