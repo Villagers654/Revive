@@ -217,6 +217,13 @@ ovrResult ovrHmdStruct::BeginSession()
 		RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
 		CHK_OVR(ovr_BeginFrame(this, currentIndex));
 	}
+	else
+	{
+		// The caller's ovr_WaitToBeginFrame already supplied a valid predicted
+		// display time. Do not let that event-pumping startup path skip the
+		// Oculus eye-level origin calibration.
+		RecenterSpace(ovrTrackingOrigin_EyeLevel, ViewSpace);
+	}
 	return ovrSuccess;
 }
 
