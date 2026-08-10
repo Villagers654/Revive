@@ -1151,7 +1151,15 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_EndFrame(ovrSession session, long long frameI
 		}
 
 		XrCompositionLayerBaseHeader& header = newLayer.Header;
-		header.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+		// Oculus eye layers are opaque unless the application explicitly uses a
+		// separate overlay. Unity titles commonly leave the eye texture's alpha
+		// channel at zero; treating it as source alpha makes a valid frame fully
+		// transparent in OpenXR. Preserve alpha blending for overlay layer types.
+		const bool eyeLayer = type == ovrLayerType_EyeFov ||
+			type == ovrLayerType_EyeMatrix ||
+			type == ovrLayerType_EyeFovDepth;
+		header.layerFlags = eyeLayer ? 0
+			: XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 		if (headLocked)
 			header.space = session->ViewSpace;
 		else
