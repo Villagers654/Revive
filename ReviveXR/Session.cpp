@@ -68,50 +68,56 @@ ovrResult ovrHmdStruct::InitSession(XrInstance instance)
 			ViewPoses[i].pose = XR::Posef::Identity();
 		}
 	}
-	else if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&pFactory)))
+	else
 	{
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
-		Microsoft::WRL::ComPtr<ID3D11Device> pDevice;
-
-		for (UINT i = 0;; ++i)
+		if (Runtime::Get().Supports(XR_MND_HEADLESS_EXTENSION_NAME))
 		{
-			Microsoft::WRL::ComPtr<IDXGIAdapter1> candidate;
-			if (pFactory->EnumAdapters1(i, &candidate) == DXGI_ERROR_NOT_FOUND)
-				break;
-			if (!pAdapter)
-				pAdapter = candidate;
+			// A temporary graphics session is only needed to query the runtime's
+			// view poses. Prefer the standard headless extension when available so
+			// initialization does not depend on a throwaway D3D/DXVK device.
+			CHK_OVR(StartSession(nullptr));
+		}
+		else if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&pFactory)))
+		{
+			Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
+			Microsoft::WRL::ComPtr<ID3D11Device> pDevice;
 
-			DXGI_ADAPTER_DESC1 adapterDesc;
-			if (SUCCEEDED(candidate->GetDesc1(&adapterDesc)) &&
-				memcmp(&adapterDesc.AdapterLuid, &graphicsReq.adapterLuid, sizeof(graphicsReq.adapterLuid)) == 0)
+			for (UINT i = 0;; ++i)
 			{
-				pAdapter = candidate;
-				break;
+				Microsoft::WRL::ComPtr<IDXGIAdapter1> candidate;
+				if (pFactory->EnumAdapters1(i, &candidate) == DXGI_ERROR_NOT_FOUND)
+					break;
+				if (!pAdapter)
+					pAdapter = candidate;
+
+				DXGI_ADAPTER_DESC1 adapterDesc;
+				if (SUCCEEDED(candidate->GetDesc1(&adapterDesc)) &&
+					memcmp(&adapterDesc.AdapterLuid, &graphicsReq.adapterLuid, sizeof(graphicsReq.adapterLuid)) == 0)
+				{
+					pAdapter = candidate;
+					break;
+				}
 			}
+
+			// WineOpenXR normally exposes the runtime GPU through a matching DXGI
+			// LUID. Some Wine/DXVK combinations cannot provide a stable LUID,
+			// though, so use the first enumerated DXGI adapter as a fallback.
+			if (!pAdapter)
+				return ovrError_IncompatibleGPU;
+
+			HRESULT hr = D3D11CreateDevice(pAdapter.Get(),
+				D3D_DRIVER_TYPE_UNKNOWN, 0, 0,
+				NULL, 0, D3D11_SDK_VERSION,
+				&pDevice, nullptr, nullptr);
+			if (FAILED(hr) || !pDevice)
+				return ovrError_IncompatibleGPU;
+
+			XrGraphicsBindingD3D11KHR graphicsBinding = XR_TYPE(GRAPHICS_BINDING_D3D11_KHR);
+			graphicsBinding.device = pDevice.Get();
+			CHK_OVR(StartSession(&graphicsBinding));
 		}
 
-		// WineOpenXR normally exposes the runtime GPU through a matching DXGI
-		// LUID. Some Wine/DXVK combinations cannot provide a stable LUID,
-		// though, so use the first enumerated DXGI adapter as a fallback. Passing
-		// an explicit adapter is required with DXVK; the generic HARDWARE driver
-		// path can expose no usable D3D feature level under Wine.
-		// Never pass a failed/null device to xrCreateSession: WineOpenXR expects
-		// a valid ID3D11Device and older builds dereference it unconditionally.
-		if (!pAdapter)
-			return ovrError_IncompatibleGPU;
-
-		HRESULT hr = D3D11CreateDevice(pAdapter.Get(),
-			D3D_DRIVER_TYPE_UNKNOWN, 0, 0,
-			NULL, 0, D3D11_SDK_VERSION,
-			&pDevice, nullptr, nullptr);
-		if (FAILED(hr) || !pDevice)
-			return ovrError_IncompatibleGPU;
-
-		XrGraphicsBindingD3D11KHR graphicsBinding = XR_TYPE(GRAPHICS_BINDING_D3D11_KHR);
-		graphicsBinding.device = pDevice.Get();
-		CHK_OVR(StartSession(&graphicsBinding));
-
-		if (Runtime::Get().UseHack(Runtime::HACK_WAIT_FOR_SESSION_READY))
+		if (Session && Runtime::Get().UseHack(Runtime::HACK_WAIT_FOR_SESSION_READY))
 		{
 			// Synchronously wait for the fake session to become ready.
 			XrEventDataBuffer event;
@@ -134,15 +140,19 @@ ovrResult ovrHmdStruct::InitSession(XrInstance instance)
 			CHK_XR(xrBeginSession(Session, &beginInfo));
 		}
 
-		CHK_OVR(LocateViews(ViewPoses));
+		if (Session)
+			CHK_OVR(LocateViews(ViewPoses));
 		for (int i = 0; i < ovrEye_Count; i++)
 		{
 			ViewFov[i].recommendedFov = ViewPoses[i].fov;
 			ViewFov[i].maxMutableFov = ViewPoses[i].fov;
 		}
 
-		CHK_XR(xrGetReferenceSpaceBoundsRect(Session, XR_REFERENCE_SPACE_TYPE_STAGE, &bounds));
-		CHK_OVR(DestroySession());
+		if (Session)
+		{
+			CHK_XR(xrGetReferenceSpaceBoundsRect(Session, XR_REFERENCE_SPACE_TYPE_STAGE, &bounds));
+			CHK_OVR(DestroySession());
+		}
 	}
 
 	// Calculate the pixels per tan angle
