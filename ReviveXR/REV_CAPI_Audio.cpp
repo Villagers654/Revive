@@ -279,6 +279,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetAudioDeviceOutGuidStr(WCHAR deviceOutStrBu
 	ovrResult result = GetDefaultAudioEndpoint(eRender, deviceOutStrBuffer);
 	if (SUCCEEDED(com))
 		CoUninitialize();
+	TraceOculusValue("ovr_GetAudioDeviceOutGuidStr.result", result);
 	return result;
 }
 
@@ -316,6 +317,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetAudioDeviceOutGuid(GUID* deviceOutGuid)
 		}
 	}
 	*deviceOutGuid = cachedGuid;
+	TraceOculusValue("ovr_GetAudioDeviceOutGuid.result", ovrSuccess);
 	return ovrSuccess;
 }
 
@@ -337,6 +339,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetAudioDeviceInGuidStr(WCHAR deviceInStrBuff
 	ovrResult result = GetDefaultAudioEndpoint(eCapture, deviceInStrBuffer);
 	if (SUCCEEDED(com))
 		CoUninitialize();
+	TraceOculusValue("ovr_GetAudioDeviceInGuidStr.result", result);
 	return result;
 }
 
@@ -374,5 +377,6 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetAudioDeviceInGuid(GUID* deviceInGuid)
 		}
 	}
 	*deviceInGuid = cachedGuid;
+	TraceOculusValue("ovr_GetAudioDeviceInGuid.result", ovrSuccess);
 	return ovrSuccess;
 }
