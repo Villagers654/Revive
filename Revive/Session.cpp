@@ -89,8 +89,8 @@ ovrHmdStruct::ovrHmdStruct()
 ovrHmdStruct::~ovrHmdStruct()
 {
 	// Restore chaperone buffer to reset tracking origin
-	if (vr::IVRChaperoneSetup* chaperoneSetup = vr::VRChaperoneSetup();
-		chaperoneSetup && !ChaperoneBuffer.empty())
+	vr::IVRChaperoneSetup* chaperoneSetup = vr::VRChaperoneSetup();
+	if (chaperoneSetup && !ChaperoneBuffer.empty())
 	{
 		chaperoneSetup->ImportFromBufferToWorking(ChaperoneBuffer.data(), 0);
 		chaperoneSetup->CommitWorkingCopy(vr::EChaperoneConfigFile_Live);

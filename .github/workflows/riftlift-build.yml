@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: windows-2022
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,6 +21,12 @@ jobs:
           $archive = Join-Path $env:RUNNER_TEMP 'oculus-sdk.zip'
           Invoke-WebRequest 'https://securecdn.oculus.com/binaries/download/?id=4377593722298679' -OutFile $archive
           Expand-Archive $archive -DestinationPath Externals -Force
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('.github/workflows/riftlift-build.yml') }}
 
       - name: Install native dependencies
         shell: pwsh
