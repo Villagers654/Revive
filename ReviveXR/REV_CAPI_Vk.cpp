@@ -200,7 +200,7 @@ ovr_CreateTextureSwapChainVk(
 			g_Binding.queueIndex = 0;
 		}
 
-		session->StartSession(&g_Binding);
+		CHK_OVR(session->StartSession(&g_Binding));
 	}
 
 	return ovrTextureSwapChainVk::Create(session, desc, out_TextureSwapChain);
@@ -277,4 +277,3 @@ ovr_GetMirrorTextureBufferVk(
 
 	return ovr_GetTextureSwapChainBufferVk(session, mirrorTexture->Dummy, 0, out_Image);
 }
-

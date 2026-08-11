@@ -117,21 +117,30 @@ ovrResult ovrHmdStruct::InitSession(XrInstance instance)
 			CHK_OVR(StartSession(&graphicsBinding));
 		}
 
-		if (Session && Runtime::Get().UseHack(Runtime::HACK_WAIT_FOR_SESSION_READY))
+		if (Session)
 		{
-			// Synchronously wait for the fake session to become ready.
+			// A temporary session follows the same lifecycle rules as a render
+			// session: xrLocateViews is not valid until the runtime has made the
+			// session ready and the application has begun it.  Do this for every
+			// runtime instead of relying on a runtime-specific workaround flag.
+			// This keeps early, pre-swapchain Oculus queries independent of the
+			// graphics API and device that the application will eventually supply.
 			XrEventDataBuffer event;
 			const XrEventDataSessionStateChanged& stateChanged =
 				reinterpret_cast<XrEventDataSessionStateChanged&>(event);
+			const auto deadline = std::chrono::steady_clock::now() + 10s;
 			do
 			{
 				event = XR_TYPE(EVENT_DATA_BUFFER);
 				XrResult result = xrPollEvent(Instance, &event);
-				if (XR_FAILED(result))
-					break;
+				if (XR_FAILED(result) && result != XR_EVENT_UNAVAILABLE)
+					return ResultToOvrResult(result);
 				if (result == XR_EVENT_UNAVAILABLE)
 					std::this_thread::sleep_for(10ms);
+				if (std::chrono::steady_clock::now() >= deadline)
+					return ovrError_Timeout;
 			} while (event.type != XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED ||
+				stateChanged.session != Session ||
 				stateChanged.state != XR_SESSION_STATE_READY);
 			assert(stateChanged.session == Session);
 

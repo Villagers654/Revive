@@ -171,7 +171,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_CreateTextureSwapChainDX(ovrSession session,
 
 			XrGraphicsBindingD3D11KHR graphicsBinding = XR_TYPE(GRAPHICS_BINDING_D3D11_KHR);
 			graphicsBinding.device = pDevice.Get();
-			session->StartSession(&graphicsBinding);
+			CHK_OVR(session->StartSession(&graphicsBinding));
 		}
 		else if (pQueue)
 		{
@@ -206,7 +206,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_CreateTextureSwapChainDX(ovrSession session,
 			XrGraphicsBindingD3D12KHR graphicsBinding = XR_TYPE(GRAPHICS_BINDING_D3D12_KHR);
 			graphicsBinding.device = pDevice12.Get();
 			graphicsBinding.queue = pQueue.Get();
-			session->StartSession(&graphicsBinding);
+			CHK_OVR(session->StartSession(&graphicsBinding));
 		}
 		else
 		{
