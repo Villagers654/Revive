@@ -151,7 +151,7 @@ OVR_PUBLIC_FUNCTION(ovrHmdDesc) ovr_GetHmdDesc(ovrSession session)
 	if (session->SystemProperties.trackingProperties.orientationTracking)
 		desc.AvailableTrackingCaps |= ovrTrackingCap_Orientation;
 	if (session->SystemProperties.trackingProperties.positionTracking)
-		desc.AvailableTrackingCaps |= ovrTrackingCap_Orientation;
+		desc.AvailableTrackingCaps |= ovrTrackingCap_Position;
 	desc.DefaultTrackingCaps = desc.AvailableTrackingCaps;
 
 	for (int i = 0; i < ovrEye_Count; i++)
