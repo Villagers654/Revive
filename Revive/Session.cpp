@@ -70,11 +70,14 @@ ovrHmdStruct::ovrHmdStruct()
 	vr::VRApplications()->GetApplicationKeyByProcessId(GetCurrentProcessId(), AppKey, sizeof(AppKey));
 
 	// Export the chaperone buffer so we can reset the tracking origin on graceful shutdown
-	uint32_t size = 0;
-	vr::VRChaperoneSetup()->ExportLiveToBuffer(nullptr, &size);
-	ChaperoneBuffer.resize(size);
-	vr::VRChaperoneSetup()->ExportLiveToBuffer(ChaperoneBuffer.data(), &size);
-	assert(size == ChaperoneBuffer.size());
+	if (vr::IVRChaperoneSetup* chaperoneSetup = vr::VRChaperoneSetup())
+	{
+		uint32_t size = 0;
+		chaperoneSetup->ExportLiveToBuffer(nullptr, &size);
+		ChaperoneBuffer.resize(size);
+		chaperoneSetup->ExportLiveToBuffer(ChaperoneBuffer.data(), &size);
+		assert(size == ChaperoneBuffer.size());
+	}
 
 	// Oculus games expect a seated tracking space by default
 	vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
@@ -86,8 +89,12 @@ ovrHmdStruct::ovrHmdStruct()
 ovrHmdStruct::~ovrHmdStruct()
 {
 	// Restore chaperone buffer to reset tracking origin
-	vr::VRChaperoneSetup()->ImportFromBufferToWorking(ChaperoneBuffer.data(), 0);
-	vr::VRChaperoneSetup()->CommitWorkingCopy(vr::EChaperoneConfigFile_Live);
+	if (vr::IVRChaperoneSetup* chaperoneSetup = vr::VRChaperoneSetup();
+		chaperoneSetup && !ChaperoneBuffer.empty())
+	{
+		chaperoneSetup->ImportFromBufferToWorking(ChaperoneBuffer.data(), 0);
+		chaperoneSetup->CommitWorkingCopy(vr::EChaperoneConfigFile_Live);
+	}
 }
 
 bool ovrHmdStruct::UseHack(Hack hack) const
