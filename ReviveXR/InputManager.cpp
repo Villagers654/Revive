@@ -524,8 +524,10 @@ void InputManager::OculusTouch::GetActionSpaces(XrSession session, std::vector<X
 
 void InputManager::OculusTouch::GetActiveSets(std::vector<XrActiveActionSet>& outSets) const
 {
-	outSets.push_back(XrActiveActionSet{ m_ActionSet, s_SubActionPaths[ovrHand_Left] });
-	outSets.push_back(XrActiveActionSet{ m_ActionSet, s_SubActionPaths[ovrHand_Right] });
+	// An action set may only appear once in a sync operation. A null subaction
+	// path activates every bound hand path and lets the runtime resolve any
+	// compatible pair of tracked controllers.
+	outSets.push_back(XrActiveActionSet{ m_ActionSet, XR_NULL_PATH });
 }
 
 ovrControllerType InputManager::OculusTouch::GetType() const
