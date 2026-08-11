@@ -171,6 +171,10 @@ ovrResult InputManager::SetControllerVibration(ovrSession session, ovrController
 ovrResult InputManager::GetInputState(ovrSession session, ovrControllerType controllerType, ovrInputState* inputState)
 {
 	memset(inputState, 0, sizeof(ovrInputState));
+	// Legacy Oculus SDK applications may poll input without using the newer
+	// frame-wait API. Let that polling path drive deferred manifest setup too.
+	if (!m_InputReady)
+		UpdateInputState();
 
 	// Interaction profiles can become active after the Oculus session is
 	// created. Refresh here so a controller that appeared after startup is not
