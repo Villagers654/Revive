@@ -61,6 +61,10 @@ jobs:
           Copy-Item Release\LibRevive64.dll $out
           Copy-Item Release\LibReviveXR32.dll $out
           Copy-Item Release\LibReviveXR64.dll $out
+          # Classic Revive translates Oculus Touch state through these OpenVR
+          # actions. Shipping the DLL without its manifest leaves controller
+          # poses alive but drops buttons, triggers, and sticks for every app.
+          Copy-Item Revive\Input "$out\Input" -Recurse
           Copy-Item LICENSE $out
           Compress-Archive "$out\*" "$env:RUNNER_TEMP\riftlift-revive.zip"
 
