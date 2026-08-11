@@ -428,6 +428,9 @@ OVR_PUBLIC_FUNCTION(ovrTrackingState) ovr_GetTrackingState(ovrSession session, d
 		std::shared_lock<std::shared_mutex> lk(session->TrackingMutex);
 		session->Input->GetTrackingState(session, &state, absTime);
 	}
+	TraceOculusValue("ovr_GetTrackingState.StatusFlags", state.StatusFlags);
+	TraceOculusValue("ovr_GetTrackingState.LeftHandStatusFlags", state.HandStatusFlags[ovrHand_Left]);
+	TraceOculusValue("ovr_GetTrackingState.RightHandStatusFlags", state.HandStatusFlags[ovrHand_Right]);
 	return state;
 }
 
@@ -551,6 +554,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetInputState(ovrSession session, ovrControll
 		memcpy(inputState, &state, sizeof(ovrInputState2));
 	else
 		memcpy(inputState, &state, sizeof(ovrInputState));
+	TraceOculusValue("ovr_GetInputState.ControllerType", state.ControllerType);
 
 	return result;
 }
@@ -559,7 +563,9 @@ OVR_PUBLIC_FUNCTION(unsigned int) ovr_GetConnectedControllerTypes(ovrSession ses
 {
 	REV_TRACE(ovr_GetConnectedControllerTypes);
 
-	return ovrControllerType_Touch | ovrControllerType_XBox | ovrControllerType_Remote;
+	const unsigned int connected = ovrControllerType_Touch | ovrControllerType_XBox | ovrControllerType_Remote;
+	TraceOculusValue("ovr_GetConnectedControllerTypes.return", connected);
+	return connected;
 }
 
 OVR_PUBLIC_FUNCTION(ovrTouchHapticsDesc) ovr_GetTouchHapticsDesc(ovrSession session, ovrControllerType controllerType)
