@@ -72,22 +72,35 @@ ovrResult ovrHmdStruct::InitSession(XrInstance instance)
 	{
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
 		Microsoft::WRL::ComPtr<ID3D11Device> pDevice;
+		bool matchedRuntimeAdapter = false;
 
-		for (UINT i = 0; pFactory->EnumAdapters1(i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i)
+		for (UINT i = 0;; ++i)
 		{
+			Microsoft::WRL::ComPtr<IDXGIAdapter1> candidate;
+			if (pFactory->EnumAdapters1(i, &candidate) == DXGI_ERROR_NOT_FOUND)
+				break;
+
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			if (SUCCEEDED(pAdapter->GetDesc1(&adapterDesc)) &&
+			if (SUCCEEDED(candidate->GetDesc1(&adapterDesc)) &&
 				memcmp(&adapterDesc.AdapterLuid, &graphicsReq.adapterLuid, sizeof(graphicsReq.adapterLuid)) == 0)
 			{
+				pAdapter = candidate;
+				matchedRuntimeAdapter = true;
 				break;
 			}
 		}
 
+		// WineOpenXR normally exposes the runtime GPU through a matching DXGI
+		// LUID. Some Wine/DXVK combinations cannot provide a stable LUID,
+		// though, so use the process's default hardware adapter as a fallback.
+		// Never pass a failed/null device to xrCreateSession: WineOpenXR expects
+		// a valid ID3D11Device and older builds dereference it unconditionally.
 		HRESULT hr = D3D11CreateDevice(pAdapter.Get(),
-			D3D_DRIVER_TYPE_UNKNOWN, 0, 0,
+			matchedRuntimeAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, 0, 0,
 			NULL, 0, D3D11_SDK_VERSION,
 			&pDevice, nullptr, nullptr);
-		assert(SUCCEEDED(hr));
+		if (FAILED(hr) || !pDevice)
+			return ovrError_IncompatibleGPU;
 
 		XrGraphicsBindingD3D11KHR graphicsBinding = XR_TYPE(GRAPHICS_BINDING_D3D11_KHR);
 		graphicsBinding.device = pDevice.Get();
