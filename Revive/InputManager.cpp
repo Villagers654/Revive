@@ -39,6 +39,7 @@ ovrResult InputManager::InputErrorToOvrError(vr::EVRInputError error)
 InputManager::InputManager()
 	: m_InputDevices()
 	, m_LastError(vr::VRInputError_None)
+	, m_InputReady(false)
 	, m_LastPoses()
 	, m_LastHandPose()
 {
@@ -47,8 +48,19 @@ InputManager::InputManager()
 	for (ovrPoseStatef& pose : m_LastHandPose)
 		pose.ThePose = OVR::Posef::Identity();
 
-	LoadActionManifest();
+	m_InputReady = LoadActionManifest();
+	if (m_InputReady)
+		InitializeInputDevices();
+	else
+		vr::VROverlay()->ShowMessageOverlay("Controller input is still initializing and will be retried automatically.", "Input initialization", "Continue");
 
+	UpdateConnectedControllers();
+}
+
+void InputManager::InitializeInputDevices()
+{
+	if (!m_InputDevices.empty())
+		return;
 	vr::VRActionSetHandle_t handle;
 	vr::EVRInputError err = vr::VRInput()->GetActionSetHandle("/actions/xbox", &handle);
 	if (err == vr::VRInputError_None)
@@ -63,8 +75,6 @@ InputManager::InputManager()
 		m_InputDevices.push_back(new OculusTouch(handle, vr::TrackedControllerRole_RightHand));
 	}
 	m_LastError = err;
-
-	UpdateConnectedControllers();
 }
 
 InputManager::~InputManager()
@@ -73,14 +83,14 @@ InputManager::~InputManager()
 		delete device;
 }
 
-void InputManager::LoadActionManifest()
+bool InputManager::LoadActionManifest()
 {
 	const char* devManifest = getenv("REVIVE_ACTION_MANIFEST");
 	if (devManifest)
 	{
 		vr::EVRInputError err = vr::VRInput()->SetActionManifestPath(devManifest);
 		if (err == vr::VRInputError_None)
-			return;
+			return true;
 	}
 
 	std::vector<char> pathVec;
@@ -97,15 +107,27 @@ void InputManager::LoadActionManifest()
 			path += "\\Input\\action_manifest.json";
 			vr::EVRInputError err = vr::VRInput()->SetActionManifestPath(path.c_str());
 			if (err == vr::VRInputError_None)
-				return;
+				return true;
 		}
 	}
-	vr::VROverlay()->ShowMessageOverlay("Failed to load action manifest, input will not function correctly!", "Action manifest error", "Continue");
-
+	return false;
 }
 
 void InputManager::UpdateInputState()
 {
+	// Some OpenVR-to-OpenXR runtimes expose IVRInput before their graphics
+	// session is ready to accept action sets. Do not permanently disable input
+	// because that first registration raced session creation; retry from the
+	// normal input polling path and create devices as soon as it succeeds.
+	if (!m_InputReady)
+	{
+		m_InputReady = LoadActionManifest();
+		if (!m_InputReady)
+			return;
+		InitializeInputDevices();
+		UpdateConnectedControllers();
+	}
+
 	std::vector<vr::VRActiveActionSet_t> sets;
 	for (InputDevice* device : m_InputDevices)
 	{

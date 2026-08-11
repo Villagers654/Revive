@@ -169,7 +169,8 @@ public:
 
 	std::atomic_uint32_t ConnectedControllers;
 
-	void LoadActionManifest();
+	bool LoadActionManifest();
+	void InitializeInputDevices();
 	void UpdateInputState();
 	void UpdateConnectedControllers();
 	ovrTouchHapticsDesc GetTouchHapticsDesc(ovrControllerType controllerType);
@@ -187,6 +188,7 @@ protected:
 
 private:
 	vr::EVRInputError m_LastError;
+	bool m_InputReady;
 	ovrPoseStatef m_LastPoses[vr::k_unMaxTrackedDeviceCount];
 	ovrPoseStatef m_LastHandPose[ovrHand_Count];
 
@@ -194,4 +196,3 @@ private:
 	unsigned int TrackedDevicePoseToOVRStatusFlags(vr::TrackedDevicePose_t pose);
 	ovrPoseStatef TrackedDevicePoseToOVRPose(vr::TrackedDevicePose_t pose, ovrPoseStatef& lastPose, double time);
 };
-
