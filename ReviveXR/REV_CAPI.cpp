@@ -369,6 +369,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_SetTrackingOriginType(ovrSession session, ovr
 	if (!session)
 		return ovrError_InvalidSession;
 
+	TraceOculusValue("ovr_SetTrackingOriginType.origin", origin);
 	assert(session->TrackingOrigin.is_lock_free());
 	session->TrackingOrigin = origin;
 	return ovrSuccess;
