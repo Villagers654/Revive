@@ -203,6 +203,7 @@ int wmain(int argc, wchar_t *argv[]) {
 	bool waitForExit = false;
 	StringArray dlls;
 	std::string appKey;
+	std::wstring workingDirOverride;
 	wchar_t path[MAX_PATH] = { 0 };
 	for (int i = 1; i < argc; i++)
 	{
@@ -251,6 +252,15 @@ int wmain(int argc, wchar_t *argv[]) {
 		{
 			waitForExit = true;
 		}
+		else if (wcscmp(argv[i], L"/cwd") == 0)
+		{
+			if (++i >= argc)
+			{
+				LOG("Missing value for /cwd\n");
+				return -1;
+			}
+			workingDirOverride = argv[i];
+		}
 		else
 		{
 			// Concatenate all other arguments
@@ -280,22 +290,30 @@ int wmain(int argc, wchar_t *argv[]) {
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
-	wchar_t workingDir[MAX_PATH];
-	wcsncpy(workingDir, path, MAX_PATH);
+	wchar_t workingDir[MAX_PATH] = { 0 };
+	if (!workingDirOverride.empty())
+		wcsncpy(workingDir, workingDirOverride.c_str(), MAX_PATH - 1);
+	else
+		wcsncpy(workingDir, path, MAX_PATH - 1);
 
-	// Remove extension
-	wchar_t* ext = wcsstr(workingDir, L".exe");
-	if (ext)
-		*ext = L'\0';
+	wchar_t* file = NULL;
+	wchar_t* ext = NULL;
+	if (workingDirOverride.empty())
+	{
+		// Remove extension
+		ext = wcsstr(workingDir, L".exe");
+		if (ext)
+			*ext = L'\0';
 
-	// Remove filename
-	wchar_t* file = wcsrchr(workingDir, L'\\');
-	if (file)
-		*file = L'\0';
+		// Remove filename
+		file = wcsrchr(workingDir, L'\\');
+		if (file)
+			*file = L'\0';
+	}
 
 	if (!DetourCreateProcessWithDlls(NULL, path, NULL, NULL, FALSE,
 		debug ? CREATE_SUSPENDED | DEBUG_ONLY_THIS_PROCESS : 0,
-		NULL, (file && ext) ? workingDir : NULL, &si, &pi,
+		NULL, (!workingDirOverride.empty() || (file && ext)) ? workingDir : NULL, &si, &pi,
 		(DWORD)dlls.size(), dlls.c_str(), NULL))
 	{
 		LOG("Failed to create process\n");
