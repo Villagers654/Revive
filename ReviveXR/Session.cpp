@@ -215,6 +215,17 @@ ovrResult ovrHmdStruct::StartSession(void* graphicsBinding)
 	CHK_XR(xrCreateReferenceSpace(Session, &spaceInfo, &OriginSpaces[ovrTrackingOrigin_FloorLevel]));
 	CHK_XR(xrCreateReferenceSpace(Session, &spaceInfo, &TrackingSpaces[ovrTrackingOrigin_FloorLevel]));
 
+	// A headless session exists only long enough to locate the headset views
+	// for SDK clients that ask for FOV data before supplying a render device.
+	// It has no graphics API, swapchain formats, or render visibility masks.
+	// Defer all graphics-dependent setup until the application creates its real
+	// swapchain and StartSession is called with that API's graphics binding.
+	if (!graphicsBinding)
+	{
+		Running.second.notify_all();
+		return ovrSuccess;
+	}
+
 	// Update the visibility mask for both eyes
 	if (Runtime::Get().VisibilityMask)
 	{
