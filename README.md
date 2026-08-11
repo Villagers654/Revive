@@ -1,5 +1,9 @@
 # Revive Compatibility Layer
 
+> **Development moved:** RiftLift's maintained Revive and ReviveXR sources now
+> live in [`Villagers654/RiftLift/components/revive`](https://github.com/Villagers654/RiftLift/tree/main/components/revive).
+> This repository is retained as a read-only historical fork.
+
 > **RiftLift compatibility fork:** this fork carries the source-level
 > Wine/Proton, Monado, and xrizer fixes packaged by
 > [RiftLift](https://github.com/Villagers654/RiftLift). Windows behavior stays
