@@ -216,7 +216,15 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_Create(ovrSession* pSession, ovrGraphicsLuid*
 	ovrSession session = &g_Sessions.back();
 
 	// Initialize session, it will not be fully usable until a swapchain is created
-	CHK_OVR(session->InitSession(g_Instance));
+	ovrResult initResult = session->InitSession(g_Instance);
+	TraceOculusValue("ovr_Create.InitSession.result", initResult);
+	if (OVR_FAILURE(initResult))
+	{
+		if (session->Session)
+			session->DestroySession();
+		g_Sessions.pop_back();
+		return initResult;
+	}
 	if (pLuid)
 		*pLuid = session->Adapter;
 	*pSession = session;
@@ -226,6 +234,8 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_Create(ovrSession* pSession, ovrGraphicsLuid*
 OVR_PUBLIC_FUNCTION(void) ovr_Destroy(ovrSession session)
 {
 	REV_TRACE(ovr_Destroy);
+	if (!session)
+		return;
 
 	session->DestroySession();
 
