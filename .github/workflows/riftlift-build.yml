@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: windows-2022
-    env:
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +29,8 @@ jobs:
       - name: Install native dependencies
         shell: pwsh
         run: |
+          $env:VCPKG_DEFAULT_BINARY_CACHE = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
+          New-Item -ItemType Directory -Force $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
           & C:\vcpkg\vcpkg.exe install --triplet x86-windows-static detours openxr-loader glfw3
           & C:\vcpkg\vcpkg.exe install --triplet x64-windows-static detours openxr-loader glfw3
           & C:\vcpkg\vcpkg.exe integrate install
