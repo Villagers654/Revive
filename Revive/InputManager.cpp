@@ -82,11 +82,20 @@ InputManager::~InputManager()
 
 bool InputManager::LoadActionManifest()
 {
+	auto actionsAvailable = []()
+	{
+		vr::VRActionSetHandle_t handle;
+		return vr::VRInput()->GetActionSetHandle("/actions/touch", &handle) == vr::VRInputError_None;
+	};
+
 	const char* devManifest = getenv("REVIVE_ACTION_MANIFEST");
 	if (devManifest)
 	{
 		vr::EVRInputError err = vr::VRInput()->SetActionManifestPath(devManifest);
-		if (err == vr::VRInputError_None)
+		// Wine's OpenVR ABI may fail to propagate the setter result even when a
+		// native runtime consumed the same launcher-provided manifest at startup.
+		// The resulting action handles are the authoritative readiness check.
+		if (err == vr::VRInputError_None || actionsAvailable())
 			return true;
 	}
 
@@ -107,7 +116,7 @@ bool InputManager::LoadActionManifest()
 				return true;
 		}
 	}
-	return false;
+	return actionsAvailable();
 }
 
 bool InputManager::EnsureInputReady()
