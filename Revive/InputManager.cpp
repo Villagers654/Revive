@@ -48,10 +48,7 @@ InputManager::InputManager()
 	for (ovrPoseStatef& pose : m_LastHandPose)
 		pose.ThePose = OVR::Posef::Identity();
 
-	m_InputReady = LoadActionManifest();
-	if (m_InputReady)
-		InitializeInputDevices();
-	else
+	if (!EnsureInputReady())
 		vr::VROverlay()->ShowMessageOverlay("Controller input is still initializing and will be retried automatically.", "Input initialization", "Continue");
 
 	UpdateConnectedControllers();
@@ -113,20 +110,24 @@ bool InputManager::LoadActionManifest()
 	return false;
 }
 
+bool InputManager::EnsureInputReady()
+{
+	if (m_InputReady)
+		return true;
+	m_InputReady = LoadActionManifest();
+	if (m_InputReady)
+		InitializeInputDevices();
+	return m_InputReady;
+}
+
 void InputManager::UpdateInputState()
 {
 	// Some OpenVR-to-OpenXR runtimes expose IVRInput before their graphics
 	// session is ready to accept action sets. Do not permanently disable input
 	// because that first registration raced session creation; retry from the
 	// normal input polling path and create devices as soon as it succeeds.
-	if (!m_InputReady)
-	{
-		m_InputReady = LoadActionManifest();
-		if (!m_InputReady)
-			return;
-		InitializeInputDevices();
-		UpdateConnectedControllers();
-	}
+	if (!EnsureInputReady())
+		return;
 
 	std::vector<vr::VRActiveActionSet_t> sets;
 	for (InputDevice* device : m_InputDevices)
@@ -144,6 +145,7 @@ void InputManager::UpdateInputState()
 
 void InputManager::UpdateConnectedControllers()
 {
+	EnsureInputReady();
 	uint32_t types = 0;
 	for (InputDevice* device : m_InputDevices)
 	{
@@ -173,8 +175,8 @@ ovrResult InputManager::GetInputState(ovrSession session, ovrControllerType cont
 	memset(inputState, 0, sizeof(ovrInputState));
 	// Legacy Oculus SDK applications may poll input without using the newer
 	// frame-wait API. Let that polling path drive deferred manifest setup too.
-	if (!m_InputReady)
-		UpdateInputState();
+	if (!EnsureInputReady())
+		return ovrError_NotInitialized;
 
 	// Interaction profiles can become active after the Oculus session is
 	// created. Refresh here so a controller that appeared after startup is not
@@ -283,6 +285,9 @@ ovrPoseStatef InputManager::TrackedDevicePoseToOVRPose(vr::TrackedDevicePose_t p
 
 void InputManager::GetTrackingState(ovrSession session, ovrTrackingState* outState, double absTime)
 {
+	// Pose polling is common to old and new Oculus SDK clients, so it is the
+	// final lifecycle-independent opportunity to complete deferred actions.
+	EnsureInputReady();
 	// Get the device poses
 	vr::ETrackingUniverseOrigin origin = vr::VRCompositor()->GetTrackingSpace();
 	vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount];

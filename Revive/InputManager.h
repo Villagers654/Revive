@@ -170,6 +170,7 @@ public:
 	std::atomic_uint32_t ConnectedControllers;
 
 	bool LoadActionManifest();
+	bool EnsureInputReady();
 	void InitializeInputDevices();
 	void UpdateInputState();
 	void UpdateConnectedControllers();
